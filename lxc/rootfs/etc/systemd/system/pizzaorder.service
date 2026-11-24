@@ -1,0 +1,25 @@
+[Unit]
+Description=MittwochsPizza – Web-App
+Requires=pizzaorder-db.service
+After=pizzaorder-db.service
+StartLimitIntervalSec=300
+StartLimitBurst=10
+
+[Service]
+Type=simple
+User=pizzaorder
+Group=pizzaorder
+# Standardwerte; die Datei auf dem Datenträger überschreibt sie
+Environment=PORT=80 STATIC_DIR=/opt/pizzaorder/app/static MONGO_URL=mongodb://127.0.0.1:27017 PYTHONDONTWRITEBYTECODE=1
+EnvironmentFile=/var/lib/pizzaorder/pizzaorder.env
+WorkingDirectory=/opt/pizzaorder/app
+ExecStart=/opt/pizzaorder/venv/bin/uvicorn main:app --host 0.0.0.0 --port ${PORT} --no-server-header
+# Darf Port 80 öffnen, sonst keine Sonderrechte
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=yes
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

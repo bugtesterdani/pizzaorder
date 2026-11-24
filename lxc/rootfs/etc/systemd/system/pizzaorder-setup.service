@@ -1,0 +1,13 @@
+[Unit]
+Description=MittwochsPizza – Einrichtung (Datenordner, Zugangsdaten)
+Before=pizzaorder-db.service pizzaorder.service
+# Falls /var/lib/pizzaorder ein eigener Proxmox-Datenträger ist: erst einhängen
+RequiresMountsFor=/var/lib/pizzaorder
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/opt/pizzaorder/setup.sh
+
+[Install]
+WantedBy=multi-user.target

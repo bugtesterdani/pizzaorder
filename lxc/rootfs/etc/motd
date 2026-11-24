@@ -1,0 +1,9 @@
+
+  MittwochsPizza
+  ──────────────
+  Zugangsdaten:   cat /root/pizzaorder-zugangsdaten.txt
+  Konfiguration:  /var/lib/pizzaorder/pizzaorder.env
+  Status:         systemctl status pizzaorder pizzaorder-db
+  Logs:           journalctl -u pizzaorder -u pizzaorder-db -f
+  Backup:         mongodump --archive --db pizzaorder > backup.archive
+
