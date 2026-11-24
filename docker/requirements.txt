@@ -1,0 +1,13 @@
+# Minimale Laufzeit-Abhängigkeiten für den Container.
+# backend/requirements.txt enthält viele Pakete, die server.py gar nicht nutzt
+# (pandas, numpy, boto3, emergentintegrations, Linter, ...). Weniger Pakete =
+# kleineres Image und weniger Angriffsfläche.
+fastapi==0.165.0
+starlette==1.10.0
+uvicorn==0.54.0
+pydantic==2.14.4
+motor==3.7.1
+pymongo==4.20.1
+pyjwt==2.15.1
+python-dotenv==1.2.4
+tzdata==2026.6

@@ -1,0 +1,14 @@
+# Nur aktiv mit: docker compose --profile https up -d
+# Caddy holt automatisch ein Let's-Encrypt-Zertifikat für {$DOMAIN}.
+# Voraussetzung: Die Domain zeigt auf die VM und Port 80 + 443 sind erreichbar.
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		-Server
+	}
+
+	reverse_proxy app:8000
+}
