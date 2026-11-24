@@ -1,9 +1,10 @@
-# MittwochsPizza – Betrieb auf einer VM
+# MittwochsPizza – alles in einem Container, Daten in einem eigenen Volume
 #
 #   cp env.example .env       # Passwörter setzen!
 #   docker compose up -d --build
 #
-# Mit HTTPS (eigene Domain, Ports 80/443 erreichbar):
+# Optional mit HTTPS (eigene Domain, Ports 80/443 erreichbar) – startet
+# zusätzlich einen Caddy-Container als Reverse-Proxy:
 #   docker compose --profile https up -d --build
 
 name: pizzaorder
@@ -21,54 +22,32 @@ x-hardening: &hardening
       max-file: "3"
 
 services:
-  app:
+  pizzaorder:
     <<: *hardening
     build:
       context: .
       args:
         APP_TITLE: ${APP_TITLE:-MittwochsPizza}
     image: pizzaorder:latest
+    container_name: pizzaorder
     environment:
-      MONGO_URL: mongodb://mongo:27017
       DB_NAME: ${DB_NAME:-pizzaorder}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD in .env setzen}
       JWT_SECRET: ${JWT_SECRET:?JWT_SECRET in .env setzen}
-      CORS_ORIGINS: ${PUBLIC_URL:-http://localhost:8080}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      MONGO_CACHE_GB: ${MONGO_CACHE_GB:-0.25}
     ports:
       # Bei HTTPS über Caddy in .env: HTTP_PORT=127.0.0.1:8080
       - "${HTTP_PORT:-8080}:8000"
-    depends_on:
-      mongo:
-        condition: service_healthy
-    networks:
-      - web
-      - db
+    volumes:
+      - pizzaorder-data:/data/db
     read_only: true
     tmpfs:
       - /tmp:size=16m,noexec,nosuid
-    mem_limit: 512m
-    pids_limit: 128
-
-  mongo:
-    <<: *hardening
-    image: mongo:${MONGO_VERSION:-7.0}
-    # Läuft direkt als mongodb-Nutzer des Images (UID 999), nicht als root.
-    user: "999:999"
-    command: ["mongod", "--bind_ip_all", "--quiet"]
-    volumes:
-      - mongo-data:/data/db
-      - mongo-config:/data/configdb
-    networks:
-      - db
-    healthcheck:
-      # mongosh ab 5.0, das alte "mongo"-Shell bei 4.4
-      test: ["CMD-SHELL", "if command -v mongosh >/dev/null; then s=mongosh; else s=mongo; fi; $$s --quiet --eval 'quit(db.adminCommand({ping: 1}).ok ? 0 : 1)'"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
-      start_period: 20s
     mem_limit: 1g
-    pids_limit: 256
+    pids_limit: 512
+    # Zeit für MongoDB, beim Stoppen sauber herunterzufahren
+    stop_grace_period: 30s
 
   caddy:
     <<: *hardening
@@ -87,18 +66,11 @@ services:
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
-      - app
-    networks:
-      - web
-
-networks:
-  web:
-  # Datenbank-Netz ohne Internetzugang und ohne Port nach außen.
-  db:
-    internal: true
+      - pizzaorder
 
 volumes:
-  mongo-data:
-  mongo-config:
+  # Fester Name, damit das Volume auch mit "docker run" gleich heißt.
+  pizzaorder-data:
+    name: pizzaorder-data
   caddy-data:
   caddy-config:
