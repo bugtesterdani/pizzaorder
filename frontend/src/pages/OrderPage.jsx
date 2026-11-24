@@ -8,10 +8,10 @@ import { CartBar } from "@/components/CartBar";
 import { CheckoutDialog } from "@/components/CheckoutDialog";
 import { Confirmation } from "@/components/Confirmation";
 
-const Menu = ({ pizzas, onAdd }) => (
+const Menu = ({ pizzas, onAdd, inWindow }) => (
   <section className="relative z-10 mx-auto max-w-5xl px-5 pb-36 sm:px-8">
     <span className="inline-flex items-center gap-2 rounded-full bg-[hsl(var(--basil-soft))] px-3 py-1 text-sm font-semibold text-[hsl(var(--basil))]" data-testid="status-open-badge">
-      <span className="h-2 w-2 animate-pulse rounded-full bg-[hsl(var(--basil))]" /> Geöffnet bis 10:30 Uhr
+      <span className="h-2 w-2 animate-pulse rounded-full bg-[hsl(var(--basil))]" /> {inWindow ? "Geöffnet bis 10:30 Uhr" : "Vom Admin freigeschaltet"}
     </span>
     <h1 className="rise mt-5 max-w-2xl font-display text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
       Such dir deine Mittwochs&shy;pizza aus.
@@ -66,7 +66,7 @@ export default function OrderPage() {
   let body = <div className="p-10 text-center text-muted-foreground" data-testid="order-loading">Lädt …</div>;
   if (order) body = <Confirmation order={order} paypalLink={paypal} onNew={() => setOrder(null)} />;
   else if (status && !status.open) body = <ClosedNotice nextOpen={status.next_open} />;
-  else if (status) body = <Menu pizzas={pizzas} onAdd={add} />;
+  else if (status) body = <Menu pizzas={pizzas} onAdd={add} inWindow={status.in_window} />;
 
   return (
     <main>

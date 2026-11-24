@@ -10,8 +10,8 @@ export const PizzaCard = ({ pizza, onAdd, index }) => {
   const add = () => { onAdd(pizza, size, qty); setQty(1); };
   return (
     <article data-testid={`pizza-card-${pizza.id}`} style={{ animationDelay: `${index * 70}ms` }}
-      className="rise flex gap-4 rounded-3xl border bg-card p-3 shadow-[0_1px_0_hsl(32_18%_85%),0_12px_30px_-18px_hsl(20_40%_20%/.35)] sm:p-4">
-      <img src={pizza.image_url} alt={pizza.name} className="h-28 w-28 shrink-0 rounded-2xl object-cover sm:h-36 sm:w-36" />
+      className="rise flex min-w-0 gap-3 rounded-3xl sm:gap-4 border bg-card p-3 shadow-[0_1px_0_hsl(32_18%_85%),0_12px_30px_-18px_hsl(20_40%_20%/.35)] sm:p-4">
+      <img src={pizza.image_url} alt={pizza.name} className="h-20 w-20 shrink-0 rounded-2xl object-cover sm:h-36 sm:w-36" />
       <div className="flex min-w-0 flex-1 flex-col">
         <div className="flex items-start justify-between gap-2">
           <h3 className="font-display text-xl font-extrabold leading-tight">{pizza.name}</h3>
@@ -22,15 +22,15 @@ export const PizzaCard = ({ pizza, onAdd, index }) => {
           {SIZES.map((s) => (
             <button key={s.key} type="button" role="radio" aria-checked={size === s.key} onClick={() => setSize(s.key)}
               data-testid={`pizza-size-${pizza.id}-${s.key}`}
-              className={`rounded-full px-3 py-1.5 text-xs font-semibold transition-colors sm:text-sm ${size === s.key ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}>
-              {s.label} <span className="hidden font-normal opacity-70 sm:inline">{s.cm}</span>
+              className={`whitespace-nowrap rounded-full px-2.5 py-1.5 sm:px-3 text-xs font-semibold transition-colors sm:text-sm ${size === s.key ? "bg-foreground text-background" : "text-muted-foreground hover:text-foreground"}`}>
+              {s.label} <span className="hidden font-normal opacity-70 sm:inline lg:hidden">{s.cm}</span>
             </button>
           ))}
         </div>
-        <div className="mt-3 flex items-center justify-between gap-2">
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
           <QtyStepper value={qty} onChange={setQty} testId={`pizza-qty-${pizza.id}`} />
           <Button onClick={add} data-testid={`pizza-add-${pizza.id}`} className="h-10 rounded-full px-4 font-semibold transition-transform active:scale-95">
-            <Plus className="mr-1 h-4 w-4" /> In den Korb
+            <Plus className="mr-1 h-4 w-4" /> <span className="sm:hidden">Dazu</span><span className="hidden sm:inline">In den Korb</span>
           </Button>
         </div>
       </div>

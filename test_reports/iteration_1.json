@@ -1,0 +1,42 @@
+{
+  "summary": "Full backend (20 pytest cases, all pass) + frontend E2E (desktop 1920 & mobile 390) of MittwochsPizza. Closed-window logic, 403 on closed orders, admin auth (401 w/o token, wrong pw error), force_open, server-side pricing (client-sent prices ignored), order flow with name validation + QR confirmation, admin orders KPIs/kitchen summary/paid toggle/delete, pizza edit/add/hide/delete reflected on public menu, settings https validation + QR preview all work. One real UI bug: pizza cards overflow horizontally on 390px mobile (price and 'In den Korb' button cut off). All test data cleaned up and settings/prices restored.",
+  "backend_issues": {
+    "critical": [],
+    "minor": [
+      {"endpoint": "POST /api/orders", "issue": "Order number = count_documents(today)+1: not atomic (concurrent orders get same number) and reuses numbers after an admin deletes an order (verified: new order got #001 again after earlier orders were deleted). Use an atomic counter collection ($inc with upsert) per date."},
+      {"endpoint": "GET /api/admin/orders", "issue": "date query param not validated (any string accepted); minor."},
+      {"endpoint": "PizzaIn", "issue": "Prices stored as float; no upper bound / 2-decimal rounding on prices."}
+    ]
+  },
+  "frontend_issues": {
+    "ui_bugs": [
+      {"component": "PizzaCard (mobile 390px)", "issue": "Horizontal overflow: documentElement.scrollWidth=424 > 390. Cards extend to x=424, price (pizza-price-*) and 'In den Korb' button are clipped at right edge; page can be scrolled sideways (visible behind checkout dialog). Cause: 112px image + QtyStepper + Add button row cannot shrink; grid item lacks min-w-0. Fix: smaller image on mobile (e.g. h-20 w-20), add min-w-0 to article, and/or flex-wrap the stepper/button row or shorten button label on xs.", "selector": "[data-testid^='pizza-card-']", "priority": "HIGH"}
+    ],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "Order menu", "issues": ["Badge 'Geöffnet bis 10:30 Uhr' is hard-coded and shown also when force_open is active outside the window (misleading).", "Desktop: size pills wrap ('Groß 34 / cm') onto two lines inside card – add whitespace-nowrap."]},
+      {"screen": "Admin Bestellungen", "issues": ["Date filter uses native browser <input type=date> (shows US format 11/24/2026) instead of shadcn Calendar/Popover."]}
+    ]
+  },
+  "test_report_links": ["/app/backend/tests/test_pizza_api.py", "/app/test_reports/pytest/pytest_results.xml"],
+  "action_items": [
+    "Fix mobile horizontal overflow of PizzaCard at 390px (HIGH)",
+    "Make order numbers atomic & non-reusable (counter collection with $inc)",
+    "Show open badge text based on status (e.g. hide 'bis 10:30' when force_open outside window)",
+    "Add whitespace-nowrap to size pill labels",
+    "Optional: replace native date input in OrdersPanel with shadcn calendar"
+  ],
+  "critical_code_review_comments": [
+    "server.py create_order: number via count_documents+1 is race-prone and duplicates after deletes",
+    "AdminPage logout is recreated each render -> useAdmin run changes identity -> panels' load effects re-run on every AdminPage render (currently only on token change, so harmless, but fragile; wrap logout in useCallback)",
+    "PizzasPanel: parseFloat of invalid price -> NaN -> null sent; backend returns 422 with pydantic msg (acceptable but message not localized)",
+    "Confirmation link builds `${paypalLink}/${total}EUR` – fine for paypal.me; QR itself is fixed link as required"
+  ],
+  "updated_files": ["/app/backend/tests/test_pizza_api.py"],
+  "success_rate": {"backend": "100%", "frontend": "92%"},
+  "test_credentials": "Admin password c#guru (from /app/memory/test_credentials.md) works",
+  "seed_data_creation": "None persisted. Created TEST_ orders/pizzas were deleted; Margherita klein price edited to 7.90 and restored to 7.5; force_open restored false; paypal link restored to https://paypal.me/DEINNAME.",
+  "retest_needed": true,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Run `pytest /app/backend/tests/test_pizza_api.py -n 0` (module functions share force_open state; module fixture cleans up and resets force_open=false). Test date was Tuesday 2026-11-24 (closed). Retest mobile 390px pizza card overflow (scrollWidth should equal 390)."
+}

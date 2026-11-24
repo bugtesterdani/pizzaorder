@@ -31,6 +31,7 @@ Size = Literal["klein", "mittel", "gross"]
 
 INDEXES: dict[str, list[IndexModel]] = {
     "pizzas": [IndexModel([("id", ASCENDING)], name="id", unique=True)],
+    "counters": [IndexModel([("key", ASCENDING)], name="key", unique=True)],
     "orders": [
         IndexModel([("id", ASCENDING)], name="id", unique=True),
         IndexModel([("date", ASCENDING), ("created_at", DESCENDING)], name="date_created"),
@@ -216,7 +217,9 @@ async def create_order(body: OrderIn):
         items.append(OrderItem(pizza_id=p["id"], pizza_name=p["name"], size=i.size, quantity=i.quantity,
                                unit_price=unit, line_total=round(unit * i.quantity, 2)))
     today = now.date().isoformat()
-    number = await db.orders.count_documents({"date": today}) + 1
+    counter = await db.counters.find_one_and_update({"key": f"orders-{today}"}, {"$inc": {"seq": 1}},
+                                                    upsert=True, return_document=True)
+    number = counter["seq"]
     order = Order(number=number, name=name, items=items, total=round(sum(x.line_total for x in items), 2),
                   date=today, created_at=datetime.now(timezone.utc).isoformat())
     await db.orders.insert_one(order.model_dump())
