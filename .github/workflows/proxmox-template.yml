@@ -31,7 +31,7 @@ jobs:
     permissions:
       contents: write # zum Anhängen an das Release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Version festlegen
         id: version
@@ -60,7 +60,7 @@ jobs:
 
       - name: Als Build-Artefakt bereitstellen
         if: github.event_name != 'release'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: proxmox-template-${{ steps.version.outputs.version }}
           path: dist/

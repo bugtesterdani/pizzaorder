@@ -24,9 +24,12 @@ annotate() {
 
 fail() {
   local logs
-  logs=$(docker logs --tail 80 "$NAME" 2>&1 || true)
-  echo "$logs"
-  annotate error "Docker-Test" "$1"$'\n'"--- docker logs"$'\n'"$logs"
+  local all logs
+  all=$(docker logs "$NAME" 2>&1 || true)
+  echo "$all" | tail -n 200
+  # MongoDB loggt sehr viel – für die Annotation nur die aussagekräftigen Zeilen
+  logs=$(grep -vE '^\{"t":' <<<"$all" | tail -n 40)
+  annotate error "Docker-Test" "$1"$'\n'"--- docker logs (ohne MongoDB-JSON)"$'\n'"$logs"
   exit 1
 }
 
@@ -54,7 +57,9 @@ python3 "$HERE/api_check.py" "http://127.0.0.1:${PORT}" "$PASSWORD" || fail "API
 
 echo "==> Neustart"
 docker restart "$NAME" >/dev/null
-docker logs "$NAME" 2>&1 | grep -q "Beende MongoDB" || fail "MongoDB wurde beim Stoppen nicht sauber beendet"
+# Logs erst einlesen: "docker logs | grep -q" bricht die Pipe ab (pipefail)
+logs=$(docker logs "$NAME" 2>&1)
+grep -q "Beende MongoDB" <<<"$logs" || fail "MongoDB wurde beim Stoppen nicht sauber beendet"
 python3 "$HERE/api_check.py" "http://127.0.0.1:${PORT}" "$PASSWORD" --persist || fail "API-Prüfung (Neustart) fehlgeschlagen"
 
 echo "==> Stoppen"
@@ -71,7 +76,8 @@ for _ in $(seq 1 60); do
   sleep 2
 done
 [ "$(docker inspect -f '{{.State.Running}}' "$NAME-weak")" = false ] || NAME="$NAME-weak" fail "Container mit unsicherem Passwort läuft weiter"
-docker logs "$NAME-weak" 2>&1 | grep -q "Unsichere Konfiguration" || NAME="$NAME-weak" fail "Keine Meldung zu unsicherem Passwort"
+logs=$(docker logs "$NAME-weak" 2>&1)
+grep -q "Unsichere Konfiguration" <<<"$logs" || NAME="$NAME-weak" fail "Keine Meldung zu unsicherem Passwort"
 
 SIZE=$(docker image inspect -f '{{.Size}}' "$IMAGE" | awk '{printf "%.0f MB", $1/1024/1024}')
 annotate notice "Docker-Image" "Alle Prüfungen bestanden (Image-Größe $SIZE)"
