@@ -1,0 +1,75 @@
+# Baut das Proxmox-CT-Template (LXC), testet es per Boot-Test und hängt es bei
+# einem veröffentlichten Release als Datei an. Bei Pull Requests und manuellem
+# Start liegt das Template als Build-Artefakt beim Workflow-Lauf.
+name: Proxmox CT-Template
+
+on:
+  release:
+    types: [published]
+  pull_request:
+    paths:
+      - "lxc/**"
+      - "docker/**"
+      - "ci/**"
+      - "backend/server.py"
+      - "frontend/**"
+      - ".github/workflows/proxmox-template.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: proxmox-template-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  template:
+    name: Template bauen und testen
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    permissions:
+      contents: write # zum Anhängen an das Release
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Version festlegen
+        id: version
+        env:
+          TAG: ${{ github.event.release.tag_name }}
+        run: |
+          if [ -n "$TAG" ]; then
+            v="${TAG#v}"
+          else
+            v="0.0.0-${GITHUB_SHA::7}"
+          fi
+          v=$(printf '%s' "$v" | tr -c 'A-Za-z0-9.+~-' '-')
+          echo "version=$v" >> "$GITHUB_OUTPUT"
+          echo "file=pizzaorder_${v}_amd64.tar.zst" >> "$GITHUB_OUTPUT"
+
+      - name: Werkzeuge installieren
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q --no-install-recommends systemd-container zstd
+
+      - name: Template bauen
+        run: sudo lxc/build-template.sh "${{ steps.version.outputs.version }}" dist
+
+      - name: Boot-Test (systemd-nspawn, unprivilegiert)
+        run: sudo ci/lxc-smoke-test.sh "dist/${{ steps.version.outputs.file }}"
+
+      - name: Als Build-Artefakt bereitstellen
+        if: github.event_name != 'release'
+        uses: actions/upload-artifact@v7
+        with:
+          name: proxmox-template-${{ steps.version.outputs.version }}
+          path: dist/
+          retention-days: 14
+          compression-level: 0
+
+      - name: An das Release anhängen
+        if: github.event_name == 'release'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$TAG" dist/* --clobber --repo "$GITHUB_REPOSITORY"

@@ -1,0 +1,22 @@
+[Unit]
+Description=MittwochsPizza – Datenbank (MongoDB, nur lokal)
+Requires=pizzaorder-setup.service
+After=pizzaorder-setup.service network.target
+# Bei dauerhaftem Fehler (z. B. CPU ohne AVX) nicht endlos neu starten
+StartLimitIntervalSec=300
+StartLimitBurst=5
+
+[Service]
+Type=simple
+User=mongodb
+Group=mongodb
+ExecStartPre=/bin/sh -c 'grep -qw avx /proc/cpuinfo || { echo "FEHLER: Die CPU des Proxmox-Hosts hat kein AVX – MongoDB ab Version 5 läuft darauf nicht." >&2; exit 1; }'
+ExecStart=/usr/bin/mongod --config /etc/pizzaorder/mongod.conf
+Restart=on-failure
+RestartSec=5
+TimeoutStopSec=90
+LimitNOFILE=64000
+NoNewPrivileges=yes
+
+[Install]
+WantedBy=multi-user.target

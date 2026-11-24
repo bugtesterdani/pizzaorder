@@ -5,6 +5,9 @@ React-Frontend) und die MongoDB-Datenbank. Die Daten liegen in einem eigenen
 Docker-Volume namens **`pizzaorder-data`** – sie bleiben also erhalten, wenn der
 Container gelöscht, neu gebaut oder aktualisiert wird.
 
+> Für Proxmox gibt es zusätzlich ein fertiges CT-Template ohne Docker –
+> siehe [PROXMOX.md](PROXMOX.md).
+
 ```
 ┌──────────────── Container "pizzaorder" ───────────────┐
 │  tini → entrypoint.sh                                 │

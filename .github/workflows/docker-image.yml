@@ -1,0 +1,36 @@
+# Baut das Docker-Image (alles in einem Container) und testet es: Start, API,
+# Neustart mit erhaltenen Daten, sauberes Stoppen, Ablehnung schwacher Passwörter.
+name: Docker-Image testen
+
+on:
+  pull_request:
+    paths:
+      - "Dockerfile"
+      - ".dockerignore"
+      - "docker/**"
+      - "ci/**"
+      - "backend/server.py"
+      - "frontend/**"
+      - ".github/workflows/docker-image.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: docker-image-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  image:
+    name: Image bauen und testen
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Image bauen
+        run: docker build -t pizzaorder:test .
+
+      - name: Container testen
+        run: ci/docker-smoke-test.sh pizzaorder:test

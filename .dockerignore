@@ -22,3 +22,4 @@ backend/tests
 *.md
 docker-compose*.yml
 env.example
+ci
