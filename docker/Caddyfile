@@ -10,5 +10,5 @@
 		-Server
 	}
 
-	reverse_proxy app:8000
+	reverse_proxy pizzaorder:8000
 }
