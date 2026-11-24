@@ -1,0 +1,271 @@
+{
+  "build_now": "Choose the smallest useful set of features from the user's scope that delivers the fastest aha moment through a complete core workflow, honoring explicit user priorities.",
+  "workflow": {
+    "product_overview": {
+      "app_name": "MittwochsPizza (Pizza-Bestellservice)",
+      "target_user_primary": "Hungriger Gast / Kollege (mobiler Besteller im Arbeits- oder Vereinskontext am Mittwochmorgen)",
+      "target_user_secondary": "Pizza-Organisator / Admin (bäckt oder bestellt gesammelt, prüft Eingänge, pflegt Preise und PayPal.me Link)",
+      "trigger": "Mittwochmorgen zwischen 07:00 und 10:30 Uhr: Hunger und das gemeinsame wöchentliche Bestellfenster öffnen sich",
+      "core_decision": "Gast wählt Sorte, Größe (Klein/Mittel/Groß) und Anzahl, gibt seinen Namen an, sendet die Bestellung ab und scannt den PayPal-QR-Code zur Bezahlung.",
+      "outcome": "Gast sieht sofort Bestellbestätigung mit festem PayPal-QR-Code und Gesamtpreis; Admin sieht die Live-Sammelliste für den heutigen Mittwoch mit Gesamtsumme.",
+      "operating_window": {
+        "allowed_day": "Mittwoch (Wednesday)",
+        "allowed_time_start": "07:00",
+        "allowed_time_end": "10:30",
+        "timezone": "Europe/Berlin",
+        "outside_behavior": "Menü und Bestelleingabe sind gesperrt. Eine freundliche Infotafel zeigt die verbleibende Zeit bis zum nächsten Mittwoch 07:00 Uhr und den aktuellen Status 'Geschlossen'."
+      }
+    },
+    "actors": [
+      {
+        "role": "Gast / Besteller",
+        "device_primary": "Mobile Smartphone Browser (390px Viewport)",
+        "auth_required": false,
+        "tasks": ["Pizza auswählen", "Größe und Menge konfigurieren", "Namen eingeben", "Bestellung absenden", "PayPal QR-Code scannen"]
+      },
+      {
+        "role": "Organisator / Admin",
+        "device_primary": "Tablet oder Desktop / Smartphone",
+        "auth_required": true,
+        "auth_method": "Einfaches Passwort-Login",
+        "tasks": ["Heutige Bestellungen überblicken (Name, Pizza, Größe, Menge, Betrag, Gesamtsumme)", "Status abhaken (z.B. bezahlt/zubereitet)", "Pizzen & Preise verwalten", "PayPal.me Link pflegen", "Bestellfenster manuell testen/übersteuern"]
+      }
+    ],
+    "steps": [
+      {
+        "step_number": 1,
+        "name": "Zeitfenster-Prüfung",
+        "actor": "System",
+        "description": "Prüft, ob aktuelle Berliner Zeit Mittwoch zwischen 07:00 und 10:30 Uhr ist. Wenn nicht, öffnet sich der 'Geschlossen'-Zustand mit Countdown zum nächsten Mittwoch. (Admin kann Bestellfenster zu Testzwecken freischalten)."
+      },
+      {
+        "step_number": 2,
+        "name": "Pizzen zusammenstellen",
+        "actor": "Gast",
+        "description": "Gast sieht die kompakte Pizzakarte. Jede Pizza bietet Schnellauswahl der Größen: Klein (z.B. 26cm), Mittel (z.B. 30cm), Groß (z.B. 34cm) mit dynamischem Aufpreis sowie Mengenzähler (+/-)."
+      },
+      {
+        "step_number": 3,
+        "name": "Warenkorb & Namenseingabe",
+        "actor": "Gast",
+        "description": "Sticky Bottom-Bar oder Slide-Over zeigt Zwischensumme und Artikelanzahl. Eingabe des Namens ('Für wen ist die Bestellung?') ist Pflichtfeld. Bei Klick auf 'Verbindlich bestellen' wird validiert."
+      },
+      {
+        "step_number": 4,
+        "name": "Bestätigung & Bezahl-QR-Code",
+        "actor": "Gast",
+        "description": "Bestellung wird registriert. Die Bestätigungsansicht zeigt die Bestell-ID, den exakten Gesamtbetrag (z.B. '18,50 €'), eine Artikelzusammenfassung und den generierten/hinterlegten PayPal-QR-Code mit direktem 'Mit PayPal bezahlen' Link."
+      },
+      {
+        "step_number": 5,
+        "name": "Admin-Übersicht & Zubereitung",
+        "actor": "Organisator",
+        "description": "Organisator loggt sich via Passwort ein. Dashboard summiert die heutigen Pizzen nach Sorten/Größen für den Einkauf/Ofen und listet alle Namen mit Einzelposten und Bezahlstatus auf."
+      }
+    ]
+  },
+  "layout_architecture": {
+    "structure_evaluation": {
+      "chosen_structure": "Mobile-First Focused Single-Flow with Bottom Floating Cart Bar & Modal Drawer",
+      "alternative_considered": "Multi-Step Wizard mit separaten Seiten (Auswahl -> Warenkorb -> Kasse -> QR-Code)",
+      "rationale": "Für eine Pizzabestellung mit engem 3,5-Stunden-Zeitfenster am Mittwochmorgen ist ein mehrstufiger Kassen-Checkout unnötig reibungsintensiv. Eine einseitige, visuelle Speisekarte mit interaktivem Größen-Wähler direkt auf der Karte, sticky Bottom-Leiste und zügiger Namenseingabe minimiert Absprünge. Unterbrechungen (z.B. Anruf am Handy) bleiben erhalten, da der Warenkorb lokal im State/LocalStorage persistiert wird.",
+      "navigation_pattern": "Minimaler Header mit Marken-Signet, Live-Status-Badge ('Geöffnet bis 10:30 Uhr' bzw. 'Geschlossen') und diskretem Admin-Schlüssel-Icon oben rechts."
+    },
+    "views": [
+      {
+        "id": "view_closed_state",
+        "title": "Bestellfenster Geschlossen",
+        "description": "Wird angezeigt, wenn außerhalb von Mittwoch 07:00–10:30 Uhr aufgerufen.",
+        "key_elements": [
+          "Freundliche Ankündigungskarte: 'Bestellungen nur mittwochs von 07:00 bis 10:30 Uhr'",
+          "Live-Countdown-Anzeige zum nächsten Mittwoch 07:00 Uhr (Tage, Stunden, Minuten)",
+          "Vorschau-Möglichkeit der Speisekarte im Nur-Lese-Modus (optional durch Klick)",
+          "Admin-Login-Button im Header zur Vorbereitung durch den Betreiber"
+        ],
+        "primary_action": "Erinnerung im Kalender vormerken / Admin Login"
+      },
+      {
+        "id": "view_customer_menu",
+        "title": "Pizza-Auswahl & Konfigurator",
+        "description": "Hauptarbeitsbereich für den Gast während des aktiven Bestellfensters.",
+        "key_elements": [
+          "Statusbanner: 'Geöffnet bis 10:30 Uhr – Frische Pizza zum Mittag'",
+          "Filterbare Kategorien (Klassiker, Vegetarisch, Spezial)",
+          "Pizzakarten mit Bild, Zutatenliste, Segmented Control für Größe (Klein / Mittel / Groß) und Mengenauswahl (+/-)",
+          "Preisaktualisierung in Echtzeit bei Größenwechsel",
+          "Sticky Footer Cart Bar mit Artikelanzahl, Gesamtsumme ('Summe: 14,50 €') und Button 'Bestellen'"
+        ],
+        "primary_action": "Pizza in Warenkorb legen & Zur Kasse / Bestätigung"
+      },
+      {
+        "id": "view_checkout_sheet",
+        "title": "Warenkorb & Besteller-Name",
+        "description": "Bottom-Sheet auf Mobile / zentriertes Modal auf Desktop.",
+        "key_elements": [
+          "Auflistung der ausgewählten Pizzen mit gewählter Größe, Anzahl und Einzelpreis",
+          "Möglichkeit zur Mengenkorrektur (+ / -) oder Löschen",
+          "Pflichteingabefeld: 'Dein Name (z.B. Max Mustermann / Büro 204)'",
+          "Hinweis: 'Bezahlung erfolgt sofort via PayPal QR-Code'",
+          "Gesamtbetrag groß hervorgehoben in Tabular Figures (z.B. '22,00 €')"
+        ],
+        "primary_action": "Verbindlich bestellen (Weiter zum PayPal QR-Code)"
+      },
+      {
+        "id": "view_order_confirmation",
+        "title": "Bestellbestätigung & QR-Code Bezahlung",
+        "description": "Sofortige Bestätigungsansicht nach Absenden der Bestellung.",
+        "key_elements": [
+          "Grünes Erfolgsbanner mit Bestellnummer (z.B. '#PIZZA-104') und Name des Bestellers",
+          "Gesamtsumme in auffälliger Preisanzeige ('Zu zahlen: 17,50 €')",
+          "Fester PayPal QR-Code (generiert mit dem vom Admin konfigurierten PayPal.me Link und vorausgefülltem Betrag)",
+          "Direkter Button: 'In PayPal-App / Browser öffnen' für Besteller, die auf demselben Smartphone surfen",
+          "Zusammenfassung der bestellten Pizzen und Abholhinweis ('Mittagspause ab 12:00 Uhr')"
+        ],
+        "primary_action": "Mit PayPal bezahlen / Weitere Bestellung aufgeben"
+      },
+      {
+        "id": "view_admin_login",
+        "title": "Admin-Anmeldung",
+        "description": "Einfaches Passwort-Login für den Pizzabeauftragten.",
+        "key_elements": [
+          "Zentrierte, saubere Login-Karte",
+          "Passwortfeld mit Sichtbarkeits-Toggle",
+          "Fehlermeldung bei falschem Passwort",
+          "Zurück zur Speisekarte Link"
+        ],
+        "primary_action": "Anmelden"
+      },
+      {
+        "id": "view_admin_dashboard",
+        "title": "Admin Bestell- & Küchenübersicht",
+        "description": "Tagesübersicht für den heutigen Mittwoch.",
+        "key_elements": [
+          "KPI-Kacheln: 'Bestellungen heute' (z.B. 18), 'Gesamtsumme' (z.B. 174,50 €), 'Pizzen gesamt' (z.B. 22)",
+          "Küchen-Zusammenfassung (Sorten & Größen aggregiert, z.B. '8x Salami Groß, 5x Margherita Mittel')",
+          "Tabellarische Bestellliste: Zeit, Name, Positionen, Betrag, Bezahlstatus-Toggle ('Offen' / 'Bezahlt')",
+          "Such- und Filterfunktion nach Namen",
+          "Export / Druckansicht für die Küche oder Pizzeria"
+        ],
+        "primary_action": "Bestellungen abhaken / Drucken"
+      },
+      {
+        "id": "view_admin_settings",
+        "title": "Admin Einstellungen & Menüverwaltung",
+        "description": "Verwaltung der Pizzen, Preise und des PayPal-Links.",
+        "key_elements": [
+          "Eingabe PayPal.me Handle / URL (z.B. 'paypal.me/pizzaorga')",
+          "Pizzakarten bearbeiten: Name, Zutaten, Preise für Klein, Mittel, Groß, Aktiv/Inaktiv Schalter",
+          "Neue Pizza hinzufügen",
+          "Testmodus-Schalter: 'Bestellfenster manuell öffnen' (übersteuert Zeitfenster für Testzwecke)"
+        ],
+        "primary_action": "Einstellungen speichern"
+      }
+    ]
+  },
+  "visual_system": {
+    "direction_rationale": "Direction: 'Artisan Woodfire & Warm Slate'. Food-Ordering erfordert appetitanregende, warme, aber hochprofessionelle Farbtöne. Ein sattes Tomaten-Terracotta als handlungsleitender Akzent, kombiniert mit cremefarbenen warmen Oberflächen (oklch(98.5% 0.006 60)), tiefem Espresso-Charcoal für gestochen scharfen Kontrast (15.8:1) und frischem Basilikum-Grün für Bestätigungen und den Geöffnet-Status. Keine kühlen Blaustufen, da sie appetithemmend wirken.",
+    "typography": {
+      "font_family_sans": "Figtree, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+      "font_family_mono": "'JetBrains Mono', ui-monospace, SFMono-Regular, monospace",
+      "font_rationale": "Figtree bietet die ideale Balance aus freundlicher Gastlichkeit und moderner Lesbarkeit auf hochauflösenden Mobilgeräten. Monospace wird ausschließlich für Bestell-IDs und System-Tokens eingesetzt. Alle Preise und Datumsangaben nutzen Figtree mit 'font-variant-numeric: tabular-nums'.",
+      "scale": {
+        "text_xs": "0.75rem (12px), Line-Height: 1rem",
+        "text_sm": "0.875rem (14px), Line-Height: 1.25rem",
+        "text_base": "1rem (16px), Line-Height: 1.5rem",
+        "text_lg": "1.125rem (18px), Line-Height: 1.75rem",
+        "text_xl": "1.25rem (20px), Line-Height: 1.75rem",
+        "text_2xl": "1.5rem (24px), Line-Height: 2rem",
+        "text_3xl": "1.875rem (30px), Line-Height: 2.25rem"
+      },
+      "weights": {
+        "regular": 400,
+        "medium": 500,
+        "semibold": 600
+      }
+    },
+    "colors_oklch": {
+      "bg_surface": "oklch(0.985 0.006 60)",
+      "surface_card": "oklch(1.0 0.0 0)",
+      "surface_elevated": "oklch(0.965 0.008 60)",
+      "surface_muted": "oklch(0.930 0.010 60)",
+      "border_subtle": "oklch(0.865 0.010 60)",
+      "border_strong": "oklch(0.590 0.015 60)",
+      "text_primary": "oklch(0.240 0.020 50)",
+      "text_secondary": "oklch(0.480 0.025 50)",
+      "text_tertiary": "oklch(0.620 0.020 50)",
+      "accent_primary": "oklch(0.540 0.180 32)",
+      "accent_hover": "oklch(0.470 0.160 32)",
+      "accent_contrast": "oklch(0.990 0.0 0)",
+      "status_open_bg": "oklch(0.950 0.040 142)",
+      "status_open_text": "oklch(0.350 0.100 142)",
+      "status_closed_bg": "oklch(0.940 0.025 30)",
+      "status_closed_text": "oklch(0.380 0.120 30)",
+      "status_pending_bg": "oklch(0.950 0.040 75)",
+      "status_pending_text": "oklch(0.400 0.080 65)"
+    },
+    "accessibility_metrics": {
+      "text_primary_on_bg": "15.81:1 (Exceeds WCAG AAA 7:1)",
+      "text_secondary_on_bg": "6.31:1 (Exceeds WCAG AA 4.5:1)",
+      "accent_contrast_on_primary": "5.37:1 (Exceeds WCAG AA 4.5:1)",
+      "status_open_text_on_bg": "9.52:1 (Exceeds WCAG AAA 7:1)",
+      "all_colors_in_srgb_gamut": true
+    },
+    "spacing_scale": {
+      "space_1": "4px",
+      "space_2": "8px",
+      "space_3": "12px",
+      "space_4": "16px",
+      "space_5": "20px",
+      "space_6": "24px",
+      "space_8": "32px",
+      "space_10": "40px",
+      "space_12": "48px"
+    },
+    "radius": {
+      "sm": "6px",
+      "md": "10px",
+      "lg": "16px",
+      "full": "9999px"
+    },
+    "elevation": {
+      "card": "0 1px 3px rgba(35, 28, 24, 0.06), 0 1px 2px rgba(35, 28, 24, 0.04)",
+      "floating_cart": "0 10px 25px -5px rgba(35, 28, 24, 0.15), 0 8px 10px -6px rgba(35, 28, 24, 0.1)"
+    }
+  },
+  "component_specifications": {
+    "pizza_card": {
+      "anatomy": [
+        "Pizza-Foto (quadratisch, abgerundet, links auf Desktop, oben/links auf Mobile)",
+        "Titel (font-weight: 600, text_primary)",
+        "Zutatenbeschreibung (text_secondary, text_sm)",
+        "Größenschalter: Segmented Control [Klein (26cm) | Mittel (30cm) | Groß (34cm)] mit aktiver Pill-Hervorhebung",
+        "Preisanzeige in Tabular Figures, dynamisch aktualisiert",
+        "Mengenregler (+ / - Buttons mit Mindesthöhe 40px für Touch)"
+      ],
+      "touch_targets": "Mindestens 44x44px für alle Touch-Buttons"
+    },
+    "order_confirmation_qr": {
+      "anatomy": [
+        "QR-Code Container mit solidem weißem Hintergrund, min. 200x200px",
+        "Zentrierter PayPal-Link im QR-Code codiert: 'https://paypal.me/{paypal_handle}/{amount}'",
+        "Auffällige Gesamtpreis-Plakette unmittelbar unter dem QR-Code",
+        "Sekundärer Text-Button: 'Link kopieren' oder 'Direkt in PayPal öffnen'"
+      ]
+    },
+    "operating_window_banner": {
+      "active_state": "Pill-Badge in frischem Grün 'Bestellfenster offen bis 10:30 Uhr'",
+      "closed_state": "Kompakte Infokarte in warmem Sand/Rot 'Bestellungen wieder am nächsten Mittwoch ab 07:00 Uhr'"
+    }
+  },
+  "localization_and_formatting": {
+    "locale": "de-DE",
+    "currency_format": "12,50 € (Komma als Dezimaltrenner, Leerzeichen, Euro-Zeichen nachgestellt)",
+    "time_format": "24h Format (z.B. 07:00 – 10:30 Uhr)",
+    "date_format": "DD.MM.YYYY (z.B. Mittwoch, 12.03.2025)",
+    "sizes_labels": {
+      "small": "Klein (26 cm)",
+      "medium": "Mittel (30 cm)",
+      "large": "Groß (34 cm)"
+    }
+  }
+}
