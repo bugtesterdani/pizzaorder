@@ -1,0 +1,104 @@
+# MittwochsPizza – Betrieb auf einer VM
+#
+#   cp env.example .env       # Passwörter setzen!
+#   docker compose up -d --build
+#
+# Mit HTTPS (eigene Domain, Ports 80/443 erreichbar):
+#   docker compose --profile https up -d --build
+
+name: pizzaorder
+
+x-hardening: &hardening
+  restart: unless-stopped
+  security_opt:
+    - no-new-privileges:true
+  cap_drop:
+    - ALL
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+services:
+  app:
+    <<: *hardening
+    build:
+      context: .
+      args:
+        APP_TITLE: ${APP_TITLE:-MittwochsPizza}
+    image: pizzaorder:latest
+    environment:
+      MONGO_URL: mongodb://mongo:27017
+      DB_NAME: ${DB_NAME:-pizzaorder}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:?ADMIN_PASSWORD in .env setzen}
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET in .env setzen}
+      CORS_ORIGINS: ${PUBLIC_URL:-http://localhost:8080}
+    ports:
+      # Bei HTTPS über Caddy in .env: HTTP_PORT=127.0.0.1:8080
+      - "${HTTP_PORT:-8080}:8000"
+    depends_on:
+      mongo:
+        condition: service_healthy
+    networks:
+      - web
+      - db
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,noexec,nosuid
+    mem_limit: 512m
+    pids_limit: 128
+
+  mongo:
+    <<: *hardening
+    image: mongo:${MONGO_VERSION:-7.0}
+    # Läuft direkt als mongodb-Nutzer des Images (UID 999), nicht als root.
+    user: "999:999"
+    command: ["mongod", "--bind_ip_all", "--quiet"]
+    volumes:
+      - mongo-data:/data/db
+      - mongo-config:/data/configdb
+    networks:
+      - db
+    healthcheck:
+      # mongosh ab 5.0, das alte "mongo"-Shell bei 4.4
+      test: ["CMD-SHELL", "if command -v mongosh >/dev/null; then s=mongosh; else s=mongo; fi; $$s --quiet --eval 'quit(db.adminCommand({ping: 1}).ok ? 0 : 1)'"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    mem_limit: 1g
+    pids_limit: 256
+
+  caddy:
+    <<: *hardening
+    image: caddy:2-alpine
+    profiles: ["https"]
+    cap_add:
+      - NET_BIND_SERVICE
+    environment:
+      DOMAIN: ${DOMAIN:-localhost}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    volumes:
+      - ./docker/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - app
+    networks:
+      - web
+
+networks:
+  web:
+  # Datenbank-Netz ohne Internetzugang und ohne Port nach außen.
+  db:
+    internal: true
+
+volumes:
+  mongo-data:
+  mongo-config:
+  caddy-data:
+  caddy-config:
